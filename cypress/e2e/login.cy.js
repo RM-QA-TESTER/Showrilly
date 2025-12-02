@@ -92,7 +92,7 @@ describe('', () => {
     it('should check if the password field is masked (type=password).', () => {
         cy.get('[name="user[password]"]').should('have.attr', 'type', 'password').type('Password1');
     });
-    it.only('should clear input fields when the page is refreshed.', () => {
+    it('should clear input fields when the page is refreshed.', () => {
         const firstName = faker.person.firstName();
         const lastName = faker.person.lastName();
         const email = faker.internet.email({ firstName, lastName }).toLowerCase();
@@ -105,9 +105,6 @@ describe('', () => {
         cy.get('[name="user[email]"]').should('have.value', '');
         cy.get('[name="user[password]"]').should('have.value', '');
     });
-    // it('should verify the ability to log in using an external provider (e.g., Google, social login).', () => {
-        
-    // });
 
     // Boundary/Edge Cases
     // it('should verify that leading/trailing spaces in username or password are correctly trimmed/rejected.', () => {
