@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "open": "cypress open",
+    "cloud:staging": "npx cypress run --record --key a6f69ffe-9157-447e-8b42-c1fb6821a609 --env environment=staging --browser chrome --spec 'cypress/e2e/**/*.cy.js'"
+  },
   "devDependencies": {
     "cypress": "^15.7.0"
   }
