@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import LoginPage from "../support/pageObjects/LoginPage";
 
 describe('', () => { 
@@ -45,7 +46,7 @@ describe('', () => {
        cy.get('[name="user[password]"]').type("Password1");
        cy.get('input[name="commit"][type="submit"]').should('be.disabled');
     });
-    it.only('sign in button should be disabled when both username and password fields are empty.', () => {
+    it('sign in button should be disabled when both username and password fields are empty.', () => {
         cy.get('input[name="commit"][type="submit"]').should('be.disabled');    
     });
     it('sign in button should be disabled when only the password field is left empty.', () => {
@@ -60,22 +61,50 @@ describe('', () => {
         
     });
     it('should prevent login with credentials of a disabled/deactivated user account.', () => {
-        cy.get('');
+        cy.get("#signup-tab").contains("Sign up").should("be.visible");
     });
 
     // UI/Functionality Scenarios
-    // it('should verify the visibility and functionality of the Forgot Password link.', () => {
-        
-    // });
-    // it('should verify the visibility and functionality of the Sign Up/Register link.', () => {
-        
-    // });
-    // it('should check if the password field is masked (type=password).', () => {
-        
-    // });
-    // it('should clear input fields when the page is refreshed.', () => {
-        
-    // });
+    it('should verify the visibility and functionality of the Forgot Password link.', () => {
+        cy.get("#signup-tab").contains("Sign up").should("be.visible").click();
+        cy.get("label[for='user_first_name']").contains('First name').should('be.visible');
+        cy.get('#user_first_name').should('be.visible');
+        cy.get("label[for='user_last_name']").contains('Last name').should('be.visible');
+        cy.get('#user_last_name').should('be.visible');
+        cy.get("label[for='user_email']").contains('Email').should('be.visible');
+        cy.get('#user_email').should('be.visible');
+    });
+    it('should verify the visibility and functionality of the Sign Up/Register link.', () => {
+        const firstName = faker.person.firstName();
+        const lastName = faker.person.lastName();
+        const email = faker.internet.email({ firstName, lastName }).toLowerCase();
+
+        cy.get("#signup-tab").contains("Sign up").should("be.visible").click();
+        cy.get('#user_first_name').should('be.visible').type(firstName);
+        cy.get('#user_last_name').should('be.visible').type(lastName);
+        cy.get('#user_email').should('be.visible').type(email);
+
+        cy.get("input[value='Sign Up']").should('be.visible').click();
+        cy.url().should('eq', 'https://staging.showrilly.com/email_confirmation');
+
+        cy.get("div.email-description.text-neutral-darker.mt-3 span").should('be.visible').and('contain.text', `Email verification link sent to ${email}. If you don't receive it in two minutes, check spam then try again.`);
+});
+    it('should check if the password field is masked (type=password).', () => {
+        cy.get('[name="user[password]"]').should('have.attr', 'type', 'password').type('Password1');
+    });
+    it.only('should clear input fields when the page is refreshed.', () => {
+        const firstName = faker.person.firstName();
+        const lastName = faker.person.lastName();
+        const email = faker.internet.email({ firstName, lastName }).toLowerCase();
+
+        cy.get('[name="user[email]"]').type(email);
+        cy.get('[name="user[password]"]').type(lastName);
+
+        cy.reload();
+
+        cy.get('[name="user[email]"]').should('have.value', '');
+        cy.get('[name="user[password]"]').should('have.value', '');
+    });
     // it('should verify the ability to log in using an external provider (e.g., Google, social login).', () => {
         
     // });

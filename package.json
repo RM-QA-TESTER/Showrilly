@@ -1,9 +1,10 @@
 {
   "scripts": {
     "open": "cypress open",
-    "cloud:staging": "npx cypress run --record --key a6f69ffe-9157-447e-8b42-c1fb6821a609 --env environment=staging --browser chrome --spec 'cypress/e2e/**/*.cy.js'"
+    "cloud:staging": "npx cypress run --record --key dcdf0140-8c8b-4458-b459-60104abb9352 --env environment=staging --browser chrome --spec 'cypress/e2e/**/*.cy.js'"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
     "cypress": "^15.7.0"
   }
 }
