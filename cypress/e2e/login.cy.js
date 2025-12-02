@@ -31,27 +31,37 @@ describe('', () => {
     });
 
     // Negative Scenarios 
-    // it('should display an error message for invalid password and valid username.', () => {
+    it('should display an error message for invalid password and valid username.', () => {
+        LoginPage.performLogin('claraise@swareco.com', 'Password@123111');
+        cy.get('#toast-container .toast-error')
+        .should('be.visible')
+        .within(() => {
+        cy.get('.toast-title').should('contain.text', 'Error');
+        cy.get('.toast-message').should('contain.text', 'Invalid Email or password.');
+        });
+    });
+    it('sign in button should be disabled when invalid username/email format.', () => {
+       cy.get('[name="user[email]"]').type("clarice");
+       cy.get('[name="user[password]"]').type("Password1");
+       cy.get('input[name="commit"][type="submit"]').should('be.disabled');
+    });
+    it.only('sign in button should be disabled when both username and password fields are empty.', () => {
+        cy.get('input[name="commit"][type="submit"]').should('be.disabled');    
+    });
+    it('sign in button should be disabled when only the password field is left empty.', () => {
+        cy.get('[name="user[password]"]').type("Password1");
+        cy.get('input[name="commit"][type="submit"]').should('be.disabled');
+    });
+    it('sign in button should be disabled when only the username/email field is left empty.', () => {
+        cy.get('[name="user[email]"]').type("clarice");
+        cy.get('input[name="commit"][type="submit"]').should('be.disabled');
+    });
+    it('should display a locked account message after too many failed login attempts (lockout mechanism).', () => {
         
-    // });
-    // it('should display an error message for invalid username/email format.', () => {
-        
-    // });
-    // it('should display an error message when both username and password fields are empty.', () => {
-        
-    // });
-    // it('should display an error message when only the password field is left empty.', () => {
-        
-    // });
-    // it('should display an error message when only the username/email field is left empty.', () => {
-        
-    // });
-    // it('should display a locked account message after too many failed login attempts (lockout mechanism).', () => {
-        
-    // });
-    // it('should prevent login with credentials of a disabled/deactivated user account.', () => {
-        
-    // });
+    });
+    it('should prevent login with credentials of a disabled/deactivated user account.', () => {
+        cy.get('');
+    });
 
     // UI/Functionality Scenarios
     // it('should verify the visibility and functionality of the Forgot Password link.', () => {
