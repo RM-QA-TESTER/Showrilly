@@ -38,15 +38,16 @@ module.exports = defineConfig({
     retries: 1,
     chromeWebSecurity: false,
 
-    // Default environment
     env: {
-      environment: "staging", // default if nothing passed
+      environment: "staging", 
     },
 
-    // Optional: JSON reporter defaults (used by workflow)
-    reporter: "json",
+    reporter: "mochawesome",
     reporterOptions: {
-      outputFile: "cypress/results/results.json"
+      reportDir: "cypress/results",
+      overwrite: false,
+      html: false,
+      json: true, 
     }
   },
 });

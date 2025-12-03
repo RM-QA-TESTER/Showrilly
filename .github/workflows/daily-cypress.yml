@@ -30,33 +30,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # Step 1: Install dependencies and the mochawesome reporter
+      # 1. Install dependencies and the mochawesome reporter (required by cypress.config.js)
       - name: Install dependencies and Mochawesome Reporter
         run: |
           npm ci
-          # Install mochawesome to reliably generate the JSON report file
           npm install mochawesome --save-dev
 
-      # Step 2: Install jq utility for JSON parsing (good practice to ensure it exists)
+      # 2. Install jq utility for JSON parsing
       - name: Install jq for JSON Parsing
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # Step 3: Use the mochawesome reporter instead of the built-in 'json'
+      # 3. Run Cypress Tests
+      # FIX: We rely on cypress.config.js for reporter configuration, so we removed the
+      # redundant --reporter and --reporter-options CLI flags.
       - name: Run Cypress Tests and Generate Report
         id: cypress
         run: |
           mkdir -p cypress/results
-          # Using mochawesome for reliable file output
-          npx cypress run \
-            --browser chrome \
-            --reporter mochawesome \
-            --reporter-options "reportDir=cypress/results,overwrite=false,json=true"
+          npx cypress run --browser chrome
 
-      - name: Merge Mochawesome Reports to Single JSON
+      # 4. Find the first generated mochawesome report and rename it to results.json
+      - name: Consolidate Mochawesome Report
         id: merge_results
         run: |
-          # Mochawesome generates separate JSON files per spec; we need to merge them for aggregation.
-          # We'll use a simple shell approach since we only need the counts from the first file found.
+          # Mochawesome generates separate JSON files per spec (e.g., mochawesome_001.json).
+          # This step finds the first generated report and renames it for the next parsing step.
           
           REPORT_FILE=$(find cypress/results -name '*.json' | head -n 1)
 
@@ -74,7 +72,7 @@ jobs:
       - name: Get Cypress Test Counts
         id: cypress_results
         run: |
-          # This step now relies on the results.json file being created by the merge step above
+          # The logic here is now fully dependent on the results.json file created above
           if [ -f cypress/results/results.json ]; then
             PASSED=$(jq -r '.stats.passes' cypress/results/results.json)
             FAILED=$(jq -r '.stats.failures' cypress/results/results.json)
