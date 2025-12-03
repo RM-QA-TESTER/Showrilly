@@ -46,7 +46,7 @@ jobs:
           npx cypress run \
             --browser chrome \
             --reporter json \
-            --reporter-options "outputFile=cypress/results/results.json"
+            --reporter-options outputFile=cypress/results/results.json
 
       # 7️⃣ Get Cypress Test Counts
       - name: Get Cypress Test Counts
@@ -96,34 +96,18 @@ jobs:
 
           if [ "$STATUS" == "success" ]; then
             COLOR="#36a64f"
-            TITLE="🚀 Daily Cypress Test Run — PASSED ✅"
+            TITLE="Daily Cypress Test Run — PASSED"
           else
             COLOR="#ff0000"
-            TITLE="🚀 Daily Cypress Test Run — FAILED ❌"
+            TITLE="Daily Cypress Test Run — FAILED"
           fi
 
-          cat <<EOF > payload.json
-{
-  "attachments": [
-    {
-      "color": "$COLOR",
-      "title": "$TITLE",
-      "fields": [
-        {"title": "Workflow", "value": "Daily Cypress Run", "short": true},
-        {"title": "Job", "value": "cypress_run", "short": true},
-        {"title": "Duration", "value": "$DURATION", "short": true},
-        {"title": "Tests Passed", "value": "$PASSED", "short": true},
-        {"title": "Tests Failed", "value": "$FAILED", "short": true}
-      ]
-    }
-  ]
-}
-EOF
+          echo "{\"attachments\":[{\"color\":\"$COLOR\",\"title\":\"$TITLE\",\"fields\":[{\"title\":\"Workflow\",\"value\":\"Daily Cypress Run\",\"short\":true},{\"title\":\"Job\",\"value\":\"cypress_run\",\"short\":true},{\"title\":\"Duration\",\"value\":\"$DURATION\",\"short\":true},{\"title\":\"Tests Passed\",\"value\":\"$PASSED\",\"short\":true},{\"title\":\"Tests Failed\",\"value\":\"$FAILED\",\"short\":true}]}]}" > payload.json
 
       # 1️⃣1️⃣ Send Slack Notification
       - name: Send Slack Notification
         if: always()
         run: |
-          curl -X POST -H 'Content-type: application/json' \
+          curl -X POST -H "Content-type: application/json" \
             --data @payload.json \
             ${{ secrets.SLACK_WEBHOOK_URL }}
