@@ -1,4 +1,4 @@
-name: Daily Cypress Run
+name: Daily Automated Cypress Test Run
 
 on:
   schedule:
@@ -10,18 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Record Job Start Time
       - name: Set Job Start Time
         id: start_time
         run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
 
+      # 2️⃣ Checkout Repo
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      # 3️⃣ Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # 4️⃣ Cache Node Modules
       - name: Cache Node Modules
         uses: actions/cache@v4
         with:
@@ -30,9 +34,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
+      # 5️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
+      # 6️⃣ Run Cypress Tests with JSON reporter
       - name: Run Cypress Tests
         id: cypress
         run: |
@@ -40,12 +46,12 @@ jobs:
           npx cypress run \
             --browser chrome \
             --reporter json \
-            --reporter-options '{"outputFile":"cypress/results/results.json"}'
+            --reporter-options outputFile=cypress/results/results.json
 
+      # 7️⃣ Get Cypress Test Counts
       - name: Get Cypress Test Counts
         id: cypress_results
         run: |
-          mkdir -p cypress/results
           if [ -f cypress/results/results.json ]; then
             PASSED=$(jq -r '.stats.passes' cypress/results/results.json)
             FAILED=$(jq -r '.stats.failures' cypress/results/results.json)
@@ -55,18 +61,8 @@ jobs:
           fi
           echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
           echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
-          # Also export to environment for next steps
-          echo "TESTS_PASSED=$PASSED" >> $GITHUB_ENV
-          echo "TESTS_FAILED=$FAILED" >> $GITHUB_ENV
 
-      - name: Upload Cypress Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-artifacts
-          path: |
-            cypress/videos
-            cypress/screenshots
-
+      # 8️⃣ Calculate Job Duration
       - name: Calculate Job Duration
         id: job_duration
         run: |
@@ -78,14 +74,14 @@ jobs:
           seconds=$((duration%60))
           printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
-          echo "JOB_DURATION=$duration_str" >> $GITHUB_ENV
 
+      # 9️⃣ Build Slack Payload
       - name: Build Slack Payload
         id: slack_payload
         run: |
           STATUS="${{ job.status }}"
-          PASSED="$TESTS_PASSED"
-          FAILED="$TESTS_FAILED"
+          PASSED="${{ steps.cypress_results.outputs.tests_passed }}"
+          FAILED="${{ steps.cypress_results.outputs.tests_failed }}"
           DURATION="${{ steps.job_duration.outputs.job_duration }}"
 
           if [ "$STATUS" == "success" ]; then
@@ -96,8 +92,25 @@ jobs:
             TITLE="Daily Cypress Test Run — FAILED"
           fi
 
-          echo "{\"attachments\":[{\"color\":\"$COLOR\",\"title\":\"$TITLE\",\"fields\":[{\"title\":\"Workflow\",\"value\":\"Daily Cypress Run\",\"short\":true},{\"title\":\"Job\",\"value\":\"cypress_run\",\"short\":true},{\"title\":\"Duration\",\"value\":\"$DURATION\",\"short\":true},{\"title\":\"Tests Passed\",\"value\":\"$PASSED\",\"short\":true},{\"title\":\"Tests Failed\",\"value\":\"$FAILED\",\"short\":true}]}]}" > payload.json
+          cat <<EOF > payload.json
+          {
+            "attachments": [
+              {
+                "color": "$COLOR",
+                "title": "$TITLE",
+                "fields": [
+                  {"title": "Workflow", "value": "Daily Cypress Run", "short": true},
+                  {"title": "Job", "value": "cypress_run", "short": true},
+                  {"title": "Duration", "value": "$DURATION", "short": true},
+                  {"title": "Tests Passed", "value": "$PASSED", "short": true},
+                  {"title": "Tests Failed", "value": "$FAILED", "short": true}
+                ]
+              }
+            ]
+          }
+          EOF
 
+      # 🔟 Send Slack Notification
       - name: Send Slack Notification
         if: always()
         run: |
