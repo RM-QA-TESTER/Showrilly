@@ -46,7 +46,7 @@ jobs:
           npx cypress run \
             --browser chrome \
             --reporter json \
-            --reporter-options outputFile=cypress/results/results.json
+            --reporter-options '{"outputFile":"cypress/results/results.json"}'
 
       # 7️⃣ Get Cypress Test Counts
       - name: Get Cypress Test Counts
@@ -90,8 +90,8 @@ jobs:
         id: slack_payload
         run: |
           STATUS="${{ job.status }}"
-          PASSED="${{ steps.cypress_results.outputs.tests_passed }}"
-          FAILED="${{ steps.cypress_results.outputs.tests_failed }}"
+          PASSED=${{ steps.cypress_results.outputs.tests_passed }}
+          FAILED=${{ steps.cypress_results.outputs.tests_failed }}
           DURATION="${{ steps.job_duration.outputs.job_duration }}"
 
           if [ "$STATUS" == "success" ]; then
