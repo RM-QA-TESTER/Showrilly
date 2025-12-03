@@ -2,8 +2,16 @@ const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
   projectId: "qhq7p9",
+
+  // Configure reporter for JSON output
+  reporter: "json",
+  reporterOptions: {
+    outputFile: process.env.CYPRESS_OUTPUT_JSON || "cypress/results/results.json"
+  },
+
   e2e: {
     specPattern: "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
+
     setupNodeEvents(on, config) {
       const envName = config.env.environment || "staging";
 
@@ -31,6 +39,7 @@ module.exports = defineConfig({
 
       return config;
     },
+
     pageLoadTimeout: 120000,
     viewportWidth: 1920,
     viewportHeight: 1080,
@@ -44,4 +53,3 @@ module.exports = defineConfig({
     },
   },
 });
-
