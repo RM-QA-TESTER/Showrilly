@@ -3,7 +3,7 @@ name: Daily Cypress Run
 on:
   schedule:
     - cron: "0 6 * * *"   # 06:00 UTC = 2:00 PM PHT
-  workflow_dispatch:      # allow manual run
+  workflow_dispatch:
 
 jobs:
   cypress-run:
@@ -11,12 +11,20 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Cache Node Modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm ci
@@ -24,20 +32,18 @@ jobs:
       - name: Run Cypress Tests
         uses: cypress-io/github-action@v6
         with:
-          record: false         # set true if you want to record on Cypress Dashboard
+          record: false
           config-file: cypress.config.js
           browser: chrome
 
-      # Upload Cypress videos & screenshots
       - name: Upload Cypress Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cypress-artifacts
           path: |
             cypress/videos
             cypress/screenshots
 
-      # Optional: Send Slack notification
       - name: Slack Notification
         if: always()
         uses: 8398a7/action-slack@v3
