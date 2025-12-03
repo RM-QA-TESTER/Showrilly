@@ -2,15 +2,14 @@ const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
   projectId: "qhq7p9",
-
-  // Configure reporter for JSON output
-  reporter: "json",
-  reporterOptions: {
-    outputFile: process.env.CYPRESS_OUTPUT_JSON || "cypress/results/results.json"
-  },
-
   e2e: {
     specPattern: "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
+
+    // Use JSON reporter for CI results
+    reporter: "json",
+    reporterOptions: {
+      outputFile: "cypress/results/results.json"
+    },
 
     setupNodeEvents(on, config) {
       const envName = config.env.environment || "staging";
@@ -47,9 +46,8 @@ module.exports = defineConfig({
     retries: 1,
     chromeWebSecurity: false,
 
-    // Default environment
     env: {
-      environment: "staging", // default if nothing passed
-    },
-  },
+      environment: "staging"
+    }
+  }
 });
