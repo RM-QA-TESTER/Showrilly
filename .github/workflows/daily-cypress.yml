@@ -140,6 +140,7 @@ jobs:
       - name: Send Slack Notification
         if: always()
         run: |
+          echo "${{ steps.slack_payload.outputs.payload }}" > payload.json
           curl -X POST -H 'Content-type: application/json' \
-          --data "${{ steps.slack_payload.outputs.payload }}" \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+            --data @payload.json \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
