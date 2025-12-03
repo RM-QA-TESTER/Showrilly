@@ -4,13 +4,6 @@ module.exports = defineConfig({
   projectId: "qhq7p9",
   e2e: {
     specPattern: "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
-
-    // Use JSON reporter for CI results
-    reporter: "json",
-    reporterOptions: {
-      outputFile: "cypress/results/results.json"
-    },
-
     setupNodeEvents(on, config) {
       const envName = config.env.environment || "staging";
 
@@ -22,6 +15,7 @@ module.exports = defineConfig({
 
       config.baseUrl = baseUrls[envName];
 
+      // Allow headless chrome, firefox, edge new mode
       on("before:browser:launch", (browser, launchOptions) => {
         if (browser.isHeadless) {
           if (browser.name === "firefox") {
@@ -36,9 +30,16 @@ module.exports = defineConfig({
         return launchOptions;
       });
 
+      // Ensure JSON reporter output path
+      on("after:run", (results) => {
+        const fs = require("fs");
+        const path = "cypress/results/results.json";
+        fs.mkdirSync("cypress/results", { recursive: true });
+        fs.writeFileSync(path, JSON.stringify(results, null, 2));
+      });
+
       return config;
     },
-
     pageLoadTimeout: 120000,
     viewportWidth: 1920,
     viewportHeight: 1080,
@@ -46,8 +47,9 @@ module.exports = defineConfig({
     retries: 1,
     chromeWebSecurity: false,
 
+    // Default environment
     env: {
-      environment: "staging"
-    }
-  }
+      environment: "staging", // default if nothing passed
+    },
+  },
 });
