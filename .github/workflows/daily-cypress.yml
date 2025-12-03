@@ -30,11 +30,27 @@ jobs:
         run: npm ci
 
       - name: Run Cypress Tests
+        id: cypress   # <-- Add this ID
         uses: cypress-io/github-action@v6
         with:
           record: false
           config-file: cypress.config.js
           browser: chrome
+
+      # Parse results.json to count passed/failed tests
+      - name: Get Cypress Test Counts
+        id: cypress-results
+        run: |
+          mkdir -p cypress/results
+          if [ -f cypress/results/results.json ]; then
+            PASSED=$(jq '.stats.passes' cypress/results/results.json)
+            FAILED=$(jq '.stats.failures' cypress/results/results.json)
+          else
+            PASSED=0
+            FAILED=0
+          fi
+          echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
 
       - name: Upload Cypress Artifacts
         uses: actions/upload-artifact@v4
@@ -57,33 +73,33 @@ jobs:
                   "title": "🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}",
                   "fields": [
                     {
-                      "title": "🧪 Workflow",
+                      "title": "Workflow",
                       "value": "Daily Cypress Run",
                       "short": true
                     },
                     {
-                      "title": "📂 Job",
+                      "title": "Job",
                       "value": "cypress-run",
                       "short": true
                     },
                     {
-                      "title": "⏱ Duration",
+                      "title": "Duration",
                       "value": "${{ job.took }}",
                       "short": true
                     },
                     {
-                      "title": "👤 Triggered by",
+                      "title": "Triggered by",
                       "value": "github-actions",
                       "short": true
                     },
                     {
-                      "title": "✔️ Tests Passed",
-                      "value": "${{ steps.cypress.outputs.tests-passed || 'N/A' }}",
+                      "title": "Tests Passed",
+                      "value": "${{ steps.cypress-results.outputs.tests_passed }}",
                       "short": true
                     },
                     {
-                      "title": "❌ Tests Failed",
-                      "value": "${{ steps.cypress.outputs.tests-failed || 'N/A' }}",
+                      "title": "Tests Failed",
+                      "value": "${{ steps.cypress-results.outputs.tests_failed }}",
                       "short": true
                     }
                   ]
