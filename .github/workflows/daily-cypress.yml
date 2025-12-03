@@ -10,22 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Record Job Start Time
       - name: Set Job Start Time
         id: start_time
         run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
 
-      # 2️⃣ Checkout Repo
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # 3️⃣ Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 4️⃣ Cache Node Modules
       - name: Cache Node Modules
         uses: actions/cache@v4
         with:
@@ -34,11 +30,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 5️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 6️⃣ Run Cypress Tests with JSON reporter
       - name: Run Cypress Tests
         id: cypress
         run: |
@@ -48,14 +42,13 @@ jobs:
             --reporter json \
             --reporter-options '{"outputFile":"cypress/results/results.json"}'
 
-      # 7️⃣ Get Cypress Test Counts
       - name: Get Cypress Test Counts
         id: cypress_results
         run: |
           mkdir -p cypress/results
           if [ -f cypress/results/results.json ]; then
-            PASSED=$(jq -r '.stats.passes' cypress/results/results.json || echo 0)
-            FAILED=$(jq -r '.stats.failures' cypress/results/results.json || echo 0)
+            PASSED=$(jq -r '.stats.passes' cypress/results/results.json)
+            FAILED=$(jq -r '.stats.failures' cypress/results/results.json)
           else
             PASSED=0
             FAILED=0
@@ -63,7 +56,6 @@ jobs:
           echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
           echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
 
-      # 8️⃣ Upload Cypress Artifacts
       - name: Upload Cypress Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -71,8 +63,6 @@ jobs:
           path: |
             cypress/videos
             cypress/screenshots
-
-      # 9️⃣ Calculate Job Duration
       - name: Calculate Job Duration
         id: job_duration
         run: |
@@ -85,7 +75,6 @@ jobs:
           printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
 
-      # 🔟 Build Slack Payload
       - name: Build Slack Payload
         id: slack_payload
         run: |
@@ -104,7 +93,6 @@ jobs:
 
           echo "{\"attachments\":[{\"color\":\"$COLOR\",\"title\":\"$TITLE\",\"fields\":[{\"title\":\"Workflow\",\"value\":\"Daily Cypress Run\",\"short\":true},{\"title\":\"Job\",\"value\":\"cypress_run\",\"short\":true},{\"title\":\"Duration\",\"value\":\"$DURATION\",\"short\":true},{\"title\":\"Tests Passed\",\"value\":\"$PASSED\",\"short\":true},{\"title\":\"Tests Failed\",\"value\":\"$FAILED\",\"short\":true}]}]}" > payload.json
 
-      # 1️⃣1️⃣ Send Slack Notification
       - name: Send Slack Notification
         if: always()
         run: |
