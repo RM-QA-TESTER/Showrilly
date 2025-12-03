@@ -1,8 +1,8 @@
-name: Daily Automated Cypress Test Run
+name: Daily Cypress Run
 
 on:
   schedule:
-    - cron: "0 6 * * *"  # 06:00 UTC = 2:00 PM PHT
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 jobs:
@@ -10,22 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Record Job Start Time
       - name: Set Job Start Time
         id: start_time
         run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
 
-      # 2️⃣ Checkout Repo
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # 3️⃣ Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 4️⃣ Cache Node Modules
       - name: Cache Node Modules
         uses: actions/cache@v4
         with:
@@ -34,11 +30,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 5️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 6️⃣ Run Cypress Tests with JSON reporter
       - name: Run Cypress Tests
         id: cypress
         run: |
@@ -48,7 +42,6 @@ jobs:
             --reporter json \
             --reporter-options outputFile=cypress/results/results.json
 
-      # 7️⃣ Get Cypress Test Counts
       - name: Get Cypress Test Counts
         id: cypress_results
         run: |
@@ -61,14 +54,14 @@ jobs:
           fi
 
           echo "Cypress results JSON:"
-          cat cypress/results/results.json
+          cat cypress/results/results.json || echo "No results file"
+
           echo "Parsed PASSED: $PASSED"
           echo "Parsed FAILED: $FAILED"
 
           echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
           echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
 
-      # 8️⃣ Calculate Job Duration
       - name: Calculate Job Duration
         id: job_duration
         run: |
@@ -81,7 +74,6 @@ jobs:
           printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
 
-      # 9️⃣ Build Slack Payload
       - name: Build Slack Payload
         id: slack_payload
         run: |
@@ -98,28 +90,12 @@ jobs:
             TITLE="Daily Cypress Test Run — FAILED"
           fi
 
-          cat <<EOF > payload.json
-          {
-            "attachments": [
-              {
-                "color": "$COLOR",
-                "title": "$TITLE",
-                "fields": [
-                  {"title": "Workflow", "value": "Daily Cypress Run", "short": true},
-                  {"title": "Job", "value": "cypress_run", "short": true},
-                  {"title": "Duration", "value": "$DURATION", "short": true},
-                  {"title": "Tests Passed", "value": "$PASSED", "short": true},
-                  {"title": "Tests Failed", "value": "$FAILED", "short": true}
-                ]
-              }
-            ]
-          }
-          EOF
+          echo "{\"attachments\":[{\"color\":\"$COLOR\",\"title\":\"$TITLE\",\"fields\":[{\"title\":\"Workflow\",\"value\":\"Daily Cypress Run\",\"short\":true},{\"title\":\"Job\",\"value\":\"cypress_run\",\"short\":true},{\"title\":\"Duration\",\"value\":\"$DURATION\",\"short\":true},{\"title\":\"Tests Passed\",\"value\":\"$PASSED\",\"short\":true},{\"title\":\"Tests Failed\",\"value\":\"$FAILED\",\"short\":true}]}]}" > payload.json
 
-      # 🔟 Send Slack Notification
       - name: Send Slack Notification
         if: always()
         run: |
+          cat payload.json
           curl -X POST -H "Content-type: application/json" \
             --data @payload.json \
             ${{ secrets.SLACK_WEBHOOK_URL }}
