@@ -2,14 +2,18 @@ name: Daily Cypress Run
 
 on:
   schedule:
-    - cron: "0 6 * * *"   # 06:00 UTC = 2:00 PM PHT
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 jobs:
-  cypress-run:
+  cypress_run:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set Job Start Time
+        id: start_time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Checkout Repo
         uses: actions/checkout@v4
 
@@ -30,27 +34,26 @@ jobs:
         run: npm ci
 
       - name: Run Cypress Tests
-        id: cypress   # <-- Add this ID
+        id: cypress
         uses: cypress-io/github-action@v6
         with:
           record: false
           config-file: cypress.config.js
           browser: chrome
 
-      # Parse results.json to count passed/failed tests
       - name: Get Cypress Test Counts
-        id: cypress-results
+        id: cypress_results
         run: |
           mkdir -p cypress/results
           if [ -f cypress/results/results.json ]; then
-            PASSED=$(jq '.stats.passes' cypress/results/results.json)
-            FAILED=$(jq '.stats.failures' cypress/results/results.json)
+            PASSED=$(jq -r '.stats.passes' cypress/results/results.json || echo 0)
+            FAILED=$(jq -r '.stats.failures' cypress/results/results.json || echo 0)
           else
             PASSED=0
             FAILED=0
           fi
-          echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
-          echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "tests_passed=\"$PASSED\"" >> $GITHUB_OUTPUT
+          echo "tests_failed=\"$FAILED\"" >> $GITHUB_OUTPUT
 
       - name: Upload Cypress Artifacts
         uses: actions/upload-artifact@v4
@@ -60,51 +63,49 @@ jobs:
             cypress/videos
             cypress/screenshots
 
+      - name: Calculate Job Duration
+        id: job_duration
+        run: |
+          end_time=$(date +%s)
+          start_time=${{ steps.start_time.outputs.start_time }}
+          duration=$((end_time - start_time))
+          hours=$((duration/3600))
+          minutes=$(((duration%3600)/60))
+          seconds=$((duration%60))
+          printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
+          echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
+
+      # ----------------------------
+      # Build Slack Payload as a string
+      # ----------------------------
+      - name: Build Slack Payload
+        id: slack_payload
+        run: |
+          payload=$(cat <<EOF
+          {
+            "attachments": [
+              {
+                "color": "${{ job.status == 'success' && '#36a64f' || '#ff0000' }}",
+                "title": "🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}",
+                "fields": [
+                  { "title": "Workflow", "value": "Daily Cypress Run", "short": true },
+                  { "title": "Job", "value": "cypress_run", "short": true },
+                  { "title": "Duration", "value": "${{ steps.job_duration.outputs.job_duration }}", "short": true },
+                  { "title": "Triggered by", "value": "github-actions", "short": true },
+                  { "title": "Tests Passed", "value": "${{ steps.cypress_results.outputs.tests_passed }}", "short": true },
+                  { "title": "Tests Failed", "value": "${{ steps.cypress_results.outputs.tests_failed }}", "short": true }
+                ]
+              }
+            ]
+          }
+          EOF
+          )
+          echo "payload=$payload" >> $GITHUB_OUTPUT
+
       - name: Slack Notification
         if: always()
         uses: 8398a7/action-slack@v3
         with:
-          status: ${{ job.status }}
-          custom_payload: |
-            {
-              "attachments": [
-                {
-                  "color": "${{ job.status == 'success' && '#36a64f' || '#ff0000' }}",
-                  "title": "🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}",
-                  "fields": [
-                    {
-                      "title": "Workflow",
-                      "value": "Daily Cypress Run",
-                      "short": true
-                    },
-                    {
-                      "title": "Job",
-                      "value": "cypress-run",
-                      "short": true
-                    },
-                    {
-                      "title": "Duration",
-                      "value": "${{ job.took }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Triggered by",
-                      "value": "github-actions",
-                      "short": true
-                    },
-                    {
-                      "title": "Tests Passed",
-                      "value": "${{ steps.cypress-results.outputs.tests_passed }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Tests Failed",
-                      "value": "${{ steps.cypress-results.outputs.tests_failed }}",
-                      "short": true
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
+          status: "${{ job.status }}"
+          custom_payload: "${{ steps.slack_payload.outputs.payload }}"
