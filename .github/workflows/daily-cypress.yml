@@ -124,17 +124,19 @@ jobs:
             --arg passed "${{ steps.cypress_results.outputs.tests_passed }}" \
             --arg failed "${{ steps.cypress_results.outputs.tests_failed }}" \
             '{
-              attachments: [{
-                color: ($status=="success"?"#36a64f":"#ff0000"),
-                title: "🚀 Daily Cypress Test Run — " + ($status=="success"? "PASSED ✅":"FAILED ❌"),
-                fields: [
-                  {title: "Workflow", value: "Daily Cypress Run", short: true},
-                  {title: "Job", value: "cypress_run", short: true},
-                  {title: "Duration", value: $duration, short: true},
-                  {title: "Tests Passed", value: $passed, short: true},
-                  {title: "Tests Failed", value: $failed, short: true}
-                ]
-              }]
+              attachments: [
+                {
+                  color: (if $status=="success" then "#36a64f" else "#ff0000" end),
+                  title: ("🚀 Daily Cypress Test Run — " + (if $status=="success" then "PASSED ✅" else "FAILED ❌" end)),
+                  fields: [
+                    {title: "Workflow", value: "Daily Cypress Run", short: true},
+                    {title: "Job", value: "cypress_run", short: true},
+                    {title: "Duration", value: $duration, short: true},
+                    {title: "Tests Passed", value: $passed, short: true},
+                    {title: "Tests Failed", value: $failed, short: true}
+                  ]
+                }
+              ]
             }')
           curl -X POST -H 'Content-type: application/json' \
           --data "$payload" \
