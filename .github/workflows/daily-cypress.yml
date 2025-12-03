@@ -81,11 +81,12 @@ jobs:
           echo "JOB_DURATION=$duration_str" >> $GITHUB_ENV
 
       - name: Build Slack Payload
+        id: slack_payload
         run: |
           STATUS="${{ job.status }}"
           PASSED="$TESTS_PASSED"
           FAILED="$TESTS_FAILED"
-          DURATION="$JOB_DURATION"
+          DURATION="${{ steps.job_duration.outputs.job_duration }}"
 
           if [ "$STATUS" == "success" ]; then
             COLOR="#36a64f"
