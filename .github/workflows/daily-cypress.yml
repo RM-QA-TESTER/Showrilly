@@ -53,13 +53,7 @@ jobs:
       # ----------------------------
       - name: Run Cypress Tests
         id: cypress
-        uses: cypress-io/github-action@v6
-        with:
-          record: false
-          browser: chrome
-          config-file: cypress.config.js
-        env:
-          CYPRESS_OUTPUT_JSON: "cypress/results/results.json"
+        run: npx cypress run --browser chrome --reporter json --reporter-options outputFile=cypress/results/results.json
 
       # ----------------------------
       # 7️⃣ Get Cypress Test Counts
@@ -76,8 +70,8 @@ jobs:
             FAILED=0
           fi
           # Ensure outputs are strings
-          echo "tests_passed=\"$PASSED\"" >> $GITHUB_OUTPUT
-          echo "tests_failed=\"$FAILED\"" >> $GITHUB_OUTPUT
+          echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
 
       # ----------------------------
       # 8️⃣ Upload Cypress Artifacts
@@ -111,16 +105,21 @@ jobs:
       - name: Build Slack Payload
         id: slack_payload
         run: |
-          payload=$(jq -n -c \
-            --arg status "${{ job.status }}" \
-            --arg duration "${{ steps.job_duration.outputs.job_duration }}" \
-            --arg passed "${{ steps.cypress_results.outputs.tests_passed }}" \
-            --arg failed "${{ steps.cypress_results.outputs.tests_failed }}" \
+          PASSED="${{ steps.cypress_results.outputs.tests_passed }}"
+          FAILED="${{ steps.cypress_results.outputs.tests_failed }}"
+          DURATION="${{ steps.job_duration.outputs.job_duration }}"
+          STATUS="${{ job.status }}"
+
+          jq -n \
+            --arg status "$STATUS" \
+            --arg duration "$DURATION" \
+            --arg passed "$PASSED" \
+            --arg failed "$FAILED" \
             '{
               attachments: [
                 {
                   color: (if $status=="success" then "#36a64f" else "#ff0000" end),
-                  title: ("🚀 Daily Cypress Test Run — " + (if $status=="success" then "PASSED ✅" else "FAILED ❌" end)),
+                  title: ("Daily Cypress Test Run — " + (if $status=="success" then "PASSED" else "FAILED" end)),
                   fields: [
                     {title: "Workflow", value: "Daily Cypress Run", short: true},
                     {title: "Job", value: "cypress_run", short: true},
@@ -130,9 +129,7 @@ jobs:
                   ]
                 }
               ]
-            }')
-          # Output as a single line for GitHub Actions
-          echo "payload=$payload" >> $GITHUB_OUTPUT
+            }' > payload.json
 
       # ----------------------------
       # 1️⃣1️⃣ Send Slack Notification
@@ -140,7 +137,6 @@ jobs:
       - name: Send Slack Notification
         if: always()
         run: |
-          echo "${{ steps.slack_payload.outputs.payload }}" > payload.json
           curl -X POST -H 'Content-type: application/json' \
             --data @payload.json \
             ${{ secrets.SLACK_WEBHOOK_URL }}
