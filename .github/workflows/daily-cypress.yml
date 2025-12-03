@@ -2,7 +2,7 @@ name: Daily Cypress Run
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 6 * * *"  # 06:00 UTC = 2:00 PM PHT
   workflow_dispatch:
 
 jobs:
@@ -46,15 +46,16 @@ jobs:
           npx cypress run \
             --browser chrome \
             --reporter json \
-            --reporter-options outputFile=cypress/results/results.json
+            --reporter-options "outputFile=cypress/results/results.json"
 
       # 7️⃣ Get Cypress Test Counts
       - name: Get Cypress Test Counts
         id: cypress_results
         run: |
+          mkdir -p cypress/results
           if [ -f cypress/results/results.json ]; then
-            PASSED=$(jq -r '.stats.passes' cypress/results/results.json)
-            FAILED=$(jq -r '.stats.failures' cypress/results/results.json)
+            PASSED=$(jq -r '.stats.passes' cypress/results/results.json || echo 0)
+            FAILED=$(jq -r '.stats.failures' cypress/results/results.json || echo 0)
           else
             PASSED=0
             FAILED=0
@@ -84,30 +85,40 @@ jobs:
           printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
 
-      # 🔟 Build Slack Payload safely using jq
+      # 🔟 Build Slack Payload
       - name: Build Slack Payload
         id: slack_payload
         run: |
-          jq -n \
-            --arg status "${{ job.status }}" \
-            --arg duration "${{ steps.job_duration.outputs.job_duration }}" \
-            --arg passed "${{ steps.cypress_results.outputs.tests_passed }}" \
-            --arg failed "${{ steps.cypress_results.outputs.tests_failed }}" \
-            '{
-              attachments: [
-                {
-                  color: ($status=="success" ? "#36a64f" : "#ff0000"),
-                  title: ("🚀 Daily Cypress Test Run — " + ($status=="success" ? "PASSED ✅" : "FAILED ❌")),
-                  fields: [
-                    {title: "Workflow", value: "Daily Cypress Run", short: true},
-                    {title: "Job", value: "cypress_run", short: true},
-                    {title: "Duration", value: $duration, short: true},
-                    {title: "Tests Passed", value: $passed, short: true},
-                    {title: "Tests Failed", value: $failed, short: true}
-                  ]
-                }
-              ]
-            }' > payload.json
+          STATUS="${{ job.status }}"
+          PASSED="${{ steps.cypress_results.outputs.tests_passed }}"
+          FAILED="${{ steps.cypress_results.outputs.tests_failed }}"
+          DURATION="${{ steps.job_duration.outputs.job_duration }}"
+
+          if [ "$STATUS" == "success" ]; then
+            COLOR="#36a64f"
+            TITLE="🚀 Daily Cypress Test Run — PASSED ✅"
+          else
+            COLOR="#ff0000"
+            TITLE="🚀 Daily Cypress Test Run — FAILED ❌"
+          fi
+
+          cat <<EOF > payload.json
+{
+  "attachments": [
+    {
+      "color": "$COLOR",
+      "title": "$TITLE",
+      "fields": [
+        {"title": "Workflow", "value": "Daily Cypress Run", "short": true},
+        {"title": "Job", "value": "cypress_run", "short": true},
+        {"title": "Duration", "value": "$DURATION", "short": true},
+        {"title": "Tests Passed", "value": "$PASSED", "short": true},
+        {"title": "Tests Failed", "value": "$FAILED", "short": true}
+      ]
+    }
+  ]
+}
+EOF
 
       # 1️⃣1️⃣ Send Slack Notification
       - name: Send Slack Notification
