@@ -60,13 +60,11 @@ jobs:
             FAILED=0
           fi
 
-          # Debug output to GitHub Actions log
           echo "Cypress results JSON:"
           cat cypress/results/results.json
           echo "Parsed PASSED: $PASSED"
           echo "Parsed FAILED: $FAILED"
 
-          # Set outputs for other steps
           echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
           echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
 
