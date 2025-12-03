@@ -58,6 +58,7 @@ jobs:
           record: false
           config-file: cypress.config.js
           browser: chrome
+          command: npx cypress run --reporter json --reporter-options "outputFile=cypress/results/results.json"
 
       # ----------------------------
       # 7️⃣ Get Cypress Test Counts
@@ -104,19 +105,10 @@ jobs:
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
 
       # ----------------------------
-      # 🔟 Build Slack Payload (JSON)
+      # 🔟 Build Slack Payload
       # ----------------------------
       - name: Build Slack Payload
         id: slack_payload
-        run: |
-          payload="{\"attachments\":[{\"color\":\"${{ job.status == 'success' && '#36a64f' || '#ff0000' }}\",\"title\":\"🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}\",\"fields\":[{\"title\":\"Workflow\",\"value\":\"Daily Cypress Run\",\"short\":true},{\"title\":\"Job\",\"value\":\"cypress_run\",\"short\":true},{\"title\":\"Duration\",\"value\":\"${{ steps.job_duration.outputs.job_duration }}\",\"short\":true},{\"title\":\"Triggered by\",\"value\":\"github-actions\",\"short\":true},{\"title\":\"Tests Passed\",\"value\":\"${{ steps.cypress_results.outputs.tests_passed }}\",\"short\":true},{\"title\":\"Tests Failed\",\"value\":\"${{ steps.cypress_results.outputs.tests_failed }}\",\"short\":true}]}]}"
-          echo "payload=$payload" >> $GITHUB_OUTPUT
-
-      # ----------------------------
-      # 1️⃣1️⃣ Send Slack Notification via Incoming Webhook
-      # ----------------------------
-      - name: Send Slack Notification
-        if: always()
         run: |
           payload=$(jq -n \
             --arg status "${{ job.status }}" \
@@ -138,6 +130,14 @@ jobs:
                 }
               ]
             }')
+          echo "payload=$payload" >> $GITHUB_OUTPUT
+
+      # ----------------------------
+      # 1️⃣1️⃣ Send Slack Notification
+      # ----------------------------
+      - name: Send Slack Notification
+        if: always()
+        run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data "$payload" \
+          --data "${{ steps.slack_payload.outputs.payload }}" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
