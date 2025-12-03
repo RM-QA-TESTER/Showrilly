@@ -75,37 +75,17 @@ jobs:
           printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
 
-      # ----------------------------
-      # Build Slack Payload as a string
-      # ----------------------------
       - name: Build Slack Payload
         id: slack_payload
         run: |
-          payload=$(cat <<EOF
-          {
-            "attachments": [
-              {
-                "color": "${{ job.status == 'success' && '#36a64f' || '#ff0000' }}",
-                "title": "🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}",
-                "fields": [
-                  { "title": "Workflow", "value": "Daily Cypress Run", "short": true },
-                  { "title": "Job", "value": "cypress_run", "short": true },
-                  { "title": "Duration", "value": "${{ steps.job_duration.outputs.job_duration }}", "short": true },
-                  { "title": "Triggered by", "value": "github-actions", "short": true },
-                  { "title": "Tests Passed", "value": "${{ steps.cypress_results.outputs.tests_passed }}", "short": true },
-                  { "title": "Tests Failed", "value": "${{ steps.cypress_results.outputs.tests_failed }}", "short": true }
-                ]
-              }
-            ]
-          }
-          EOF
-          )
+          payload="{\"attachments\":[{\"color\":\"${{ job.status == 'success' && '#36a64f' || '#ff0000' }}\",\"title\":\"🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}\",\"fields\":[{\"title\":\"Workflow\",\"value\":\"Daily Cypress Run\",\"short\":true},{\"title\":\"Job\",\"value\":\"cypress_run\",\"short\":true},{\"title\":\"Duration\",\"value\":\"${{ steps.job_duration.outputs.job_duration }}\",\"short\":true},{\"title\":\"Triggered by\",\"value\":\"github-actions\",\"short\":true},{\"title\":\"Tests Passed\",\"value\":\"${{ steps.cypress_results.outputs.tests_passed }}\",\"short\":true},{\"title\":\"Tests Failed\",\"value\":\"${{ steps.cypress_results.outputs.tests_failed }}\",\"short\":true}]}]}"
           echo "payload=$payload" >> $GITHUB_OUTPUT
 
       - name: Slack Notification
         if: always()
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
-          slack_webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
           status: "${{ job.status }}"
           custom_payload: "${{ steps.slack_payload.outputs.payload }}"
