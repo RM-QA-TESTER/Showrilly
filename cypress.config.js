@@ -15,15 +15,6 @@ module.exports = defineConfig({
 
       config.baseUrl = baseUrls[envName];
 
-      // Ensure Cypress JSON reporter works
-      on("after:run", (results) => {
-        const fs = require("fs");
-        const path = "cypress/results/results.json";
-        fs.mkdirSync("cypress/results", { recursive: true });
-        fs.writeFileSync(path, JSON.stringify(results, null, 2));
-      });
-
-      // Headless browser fixes
       on("before:browser:launch", (browser, launchOptions) => {
         if (browser.isHeadless) {
           if (browser.name === "firefox") {
@@ -46,8 +37,16 @@ module.exports = defineConfig({
     numTestsKeptInMemory: 0,
     retries: 1,
     chromeWebSecurity: false,
+
+    // Default environment
     env: {
       environment: "staging", // default if nothing passed
     },
+
+    // Optional: JSON reporter defaults (used by workflow)
+    reporter: "json",
+    reporterOptions: {
+      outputFile: "cypress/results/results.json"
+    }
   },
 });

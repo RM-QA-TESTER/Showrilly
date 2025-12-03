@@ -55,6 +55,9 @@ jobs:
           fi
           echo "tests_passed=$PASSED" >> $GITHUB_OUTPUT
           echo "tests_failed=$FAILED" >> $GITHUB_OUTPUT
+          # Also export to environment for next steps
+          echo "TESTS_PASSED=$PASSED" >> $GITHUB_ENV
+          echo "TESTS_FAILED=$FAILED" >> $GITHUB_ENV
 
       - name: Upload Cypress Artifacts
         uses: actions/upload-artifact@v4
@@ -63,6 +66,7 @@ jobs:
           path: |
             cypress/videos
             cypress/screenshots
+
       - name: Calculate Job Duration
         id: job_duration
         run: |
@@ -74,14 +78,14 @@ jobs:
           seconds=$((duration%60))
           printf -v duration_str "%02d:%02d:%02d" $hours $minutes $seconds
           echo "job_duration=$duration_str" >> $GITHUB_OUTPUT
+          echo "JOB_DURATION=$duration_str" >> $GITHUB_ENV
 
       - name: Build Slack Payload
-        id: slack_payload
         run: |
           STATUS="${{ job.status }}"
-          PASSED=${{ steps.cypress_results.outputs.tests_passed }}
-          FAILED=${{ steps.cypress_results.outputs.tests_failed }}
-          DURATION="${{ steps.job_duration.outputs.job_duration }}"
+          PASSED="$TESTS_PASSED"
+          FAILED="$TESTS_FAILED"
+          DURATION="$JOB_DURATION"
 
           if [ "$STATUS" == "success" ]; then
             COLOR="#36a64f"
