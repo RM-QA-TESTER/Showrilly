@@ -49,6 +49,46 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          fields: repo,message,commit,author
+          custom_payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && '#36a64f' || '#ff0000' }}",
+                  "title": "🚀 Daily Cypress Test Run — ${{ job.status == 'success' && 'PASSED ✅' || 'FAILED ❌' }}",
+                  "fields": [
+                    {
+                      "title": "🧪 Workflow",
+                      "value": "Daily Cypress Run",
+                      "short": true
+                    },
+                    {
+                      "title": "📂 Job",
+                      "value": "cypress-run",
+                      "short": true
+                    },
+                    {
+                      "title": "⏱ Duration",
+                      "value": "${{ job.took }}",
+                      "short": true
+                    },
+                    {
+                      "title": "👤 Triggered by",
+                      "value": "github-actions",
+                      "short": true
+                    },
+                    {
+                      "title": "✔️ Tests Passed",
+                      "value": "${{ steps.cypress.outputs.tests-passed || 'N/A' }}",
+                      "short": true
+                    },
+                    {
+                      "title": "❌ Tests Failed",
+                      "value": "${{ steps.cypress.outputs.tests-failed || 'N/A' }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
