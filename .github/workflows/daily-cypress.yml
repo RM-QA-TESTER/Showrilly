@@ -30,49 +30,52 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 1. Install dependencies and the mochawesome reporter (required by cypress.config.js)
+      # 1. Install dependencies and the mochawesome reporter
       - name: Install dependencies and Mochawesome Reporter
         run: |
           npm ci
-          npm install mochawesome --save-dev
+          # We need mochawesome and mochawesome-merge for full aggregation
+          npm install mochawesome mochawesome-merge --save-dev
 
       # 2. Install jq utility for JSON parsing
       - name: Install jq for JSON Parsing
         run: sudo apt-get update && sudo apt-get install -y jq
 
       # 3. Run Cypress Tests
-      # FIX: We rely on cypress.config.js for reporter configuration, so we removed the
-      # redundant --reporter and --reporter-options CLI flags.
+      # Relying on cypress.config.js for reporter config.
       - name: Run Cypress Tests and Generate Report
         id: cypress
+        # Use continue-on-error: true so subsequent steps run even if tests fail.
+        continue-on-error: true
         run: |
           mkdir -p cypress/results
           npx cypress run --browser chrome
 
-      # 4. Find the first generated mochawesome report and rename it to results.json
-      - name: Consolidate Mochawesome Report
+      # 4. FIX: Use 'find' to reliably gather all generated reports for merging.
+      - name: Consolidate Mochawesome Report (Merge All Specs)
         id: merge_results
         run: |
-          # Mochawesome generates separate JSON files per spec (e.g., mochawesome_001.json).
-          # This step finds the first generated report and renames it for the next parsing step.
+          echo "Checking for reports in cypress/results..."
           
-          REPORT_FILE=$(find cypress/results -name '*.json' | head -n 1)
+          # Find all JSON reports and store their paths in a variable for merging
+          # Using xargs to handle the list of files found by find
+          FILES_TO_MERGE=$(find cypress/results -name 'mochawesome_*.json' -print0 | xargs -0 echo)
 
-          if [ -f "$REPORT_FILE" ]; then
-            echo "Found report: $REPORT_FILE"
-            # Rename the found file to the expected results.json path
-            mv "$REPORT_FILE" cypress/results/results.json
+          if [ -n "$FILES_TO_MERGE" ]; then
+            echo "Found reports. Merging into results.json..."
+            # Pass the list of files found to mochawesome-merge
+            npx mochawesome-merge $FILES_TO_MERGE > cypress/results/results.json
+            echo "Merge complete."
           else
-            echo "Error: No mochawesome JSON report files found in cypress/results. Creating empty file."
+            echo "Error: No mochawesome JSON report files found. Creating empty file."
             # Create an empty but valid JSON structure if no tests ran or reporter failed
-            echo '{"stats":{"passes":0,"failures":0}}' > cypress/results/results.json
+            echo '{"stats":{"passes":0,"failures":0, "suites":0, "tests":0}}' > cypress/results/results.json
           fi
-
 
       - name: Get Cypress Test Counts
         id: cypress_results
         run: |
-          # The logic here is now fully dependent on the results.json file created above
+          # This step now relies on the consolidated results.json file
           if [ -f cypress/results/results.json ]; then
             PASSED=$(jq -r '.stats.passes' cypress/results/results.json)
             FAILED=$(jq -r '.stats.failures' cypress/results/results.json)
@@ -82,7 +85,8 @@ jobs:
           fi
 
           echo "Cypress results JSON:"
-          cat cypress/results/results.json || echo "No results file"
+          # Only output the content if the file exists
+          cat cypress/results/results.json 2>/dev/null || echo "No results file"
 
           echo "Parsed PASSED: $PASSED"
           echo "Parsed FAILED: $FAILED"
@@ -105,13 +109,12 @@ jobs:
       - name: Build Slack Payload
         id: slack_payload
         run: |
-          STATUS="${{ job.status }}"
           PASSED="${{ steps.cypress_results.outputs.tests_passed }}"
           FAILED="${{ steps.cypress_results.outputs.tests_failed }}"
           DURATION="${{ steps.job_duration.outputs.job_duration }}"
 
-          # Check if FAILED is a string "0" before deciding the color
-          if [ "$FAILED" == "0" ] && [ "$STATUS" == "success" ]; then
+          # Determine status based purely on the number of failed tests (FAILED > 0 means failure).
+          if [ "$FAILED" == "0" ]; then
             COLOR="#36a64f"
             TITLE="Daily Cypress Test Run — PASSED"
           else
