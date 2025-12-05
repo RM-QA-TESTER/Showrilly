@@ -57,9 +57,9 @@ jobs:
         run: |
           echo "Checking for reports in cypress/results..."
           
-          # Find all JSON reports and store their paths in a variable for merging
-          # Using xargs to handle the list of files found by find
-          FILES_TO_MERGE=$(find cypress/results -name 'mochawesome_*.json' -print0 | xargs -0 echo)
+          # FIX APPLIED: Broaden the search pattern to find all JSON files (*.json)
+          # This ensures all reports (e.g., mochawesome.json, mochawesome_001.json) are included.
+          FILES_TO_MERGE=$(find cypress/results -name '*.json' -print0 | xargs -0 echo)
 
           if [ -n "$FILES_TO_MERGE" ]; then
             echo "Found reports. Merging into results.json..."
