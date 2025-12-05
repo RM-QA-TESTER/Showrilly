@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker';
-import LoginPage from "../support/pageObjects/LoginPage";
+import LoginPage from "../../support/pageObjects/LoginPage";
 
 describe('', () => { 
     beforeEach(() => {
         cy.visit("/");
-    });
+    }); 
 
     it('should allow a user to successfully log in with valid credentials.', () => {
         LoginPage.performLogin('clarice@swareco.com', 'Password@123111');

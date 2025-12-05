@@ -1,25 +1,25 @@
 class LoginPage {
   getEmailInput() {
-    return cy.get('[name="user[email]"]')
+    return cy.get('#user_email');
   }
 
   getPasswordInput() {
-    return cy.get('[name="user[password]"]')
+    return cy.get('#user_password');
   }
 
   getLoginButton() {
-    return cy.get('[name="commit"]')
+    return cy.get('[name="commit"]');
   }
 
   getErrorMessage() {
-    return cy.get('.toast-error')
+    return cy.get('.toast-error');
   }
 
   performLogin(email, password) {
-    this.getEmailInput().type(email)
-    this.getPasswordInput().type(password)
-    this.getLoginButton().click()
+    this.getEmailInput().clear().type(email);
+    this.getPasswordInput().clear().type(password);
+    this.getLoginButton().click();
   }
 }
 
-export default new LoginPage()
+export default new LoginPage();
